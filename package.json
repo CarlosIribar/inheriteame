@@ -1,6 +1,6 @@
 {
   "name": "inheriteame",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Salesforce CLI plugin for explicit Apex inherited sharing",
   "license": "MIT",
   "author": "Carlos Iribar",
@@ -45,14 +45,14 @@
     "@oclif/core": "^4.0.0"
   },
   "optionalDependencies": {
-    "inheriteame-darwin-arm64": "0.1.0",
-    "inheriteame-darwin-x64": "0.1.0",
-    "inheriteame-linux-arm64-gnu": "0.1.0",
-    "inheriteame-linux-arm64-musl": "0.1.0",
-    "inheriteame-linux-x64-gnu": "0.1.0",
-    "inheriteame-linux-x64-musl": "0.1.0",
-    "@carlosiribar/inheriteame-win32-x64": "0.1.0",
-    "@carlosiribar/inheriteame-win32-arm64": "0.1.0"
+    "inheriteame-darwin-arm64": "0.1.1",
+    "inheriteame-darwin-x64": "0.1.1",
+    "inheriteame-linux-arm64-gnu": "0.1.1",
+    "inheriteame-linux-arm64-musl": "0.1.1",
+    "inheriteame-linux-x64-gnu": "0.1.1",
+    "inheriteame-linux-x64-musl": "0.1.1",
+    "@carlosiribar/inheriteame-win32-x64": "0.1.1",
+    "@carlosiribar/inheriteame-win32-arm64": "0.1.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
