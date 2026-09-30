@@ -1,0 +1,166 @@
+name: Release to npm
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: npm-release
+  queue: max
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.reserve.outputs.tag }}
+      version: ${{ steps.reserve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: reserve
+        run: node scripts/auto-release.mjs --reserve
+
+  checks:
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.prepare.outputs.tag }}
+
+  native:
+    needs: prepare
+    name: Native ${{ matrix.id }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: linux-x64-gnu, runner: ubuntu-24.04, rust-target: x86_64-unknown-linux-gnu, extension: '' }
+          - { id: linux-arm64-gnu, runner: ubuntu-24.04-arm, rust-target: aarch64-unknown-linux-gnu, extension: '' }
+          - { id: linux-x64-musl, runner: ubuntu-24.04, rust-target: x86_64-unknown-linux-musl, extension: '' }
+          - { id: linux-arm64-musl, runner: ubuntu-24.04-arm, rust-target: aarch64-unknown-linux-musl, extension: '' }
+          - { id: darwin-x64, runner: macos-15-intel, rust-target: x86_64-apple-darwin, extension: '' }
+          - { id: darwin-arm64, runner: macos-15, rust-target: aarch64-apple-darwin, extension: '' }
+          - { id: win32-x64, runner: windows-2022, rust-target: x86_64-pc-windows-msvc, extension: '.exe' }
+          - { id: win32-arm64, runner: windows-11-arm, rust-target: aarch64-pc-windows-msvc, extension: '.exe' }
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@1.98.0
+        with:
+          targets: ${{ matrix.rust-target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: native-${{ matrix.id }}
+      - if: contains(matrix.id, 'musl')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          echo 'CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc' >> "$GITHUB_ENV"
+          echo 'CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc' >> "$GITHUB_ENV"
+          echo 'CC_x86_64_unknown_linux_musl=musl-gcc' >> "$GITHUB_ENV"
+          echo 'CC_aarch64_unknown_linux_musl=musl-gcc' >> "$GITHUB_ENV"
+      - run: cargo build --release --locked --target ${{ matrix.rust-target }}
+      - run: node scripts/stage-native.mjs --target ${{ matrix.id }} --source target/${{ matrix.rust-target }}/release/inheriteame-native${{ matrix.extension }}
+      - run: node scripts/verify-packages.mjs --target ${{ matrix.id }}
+      - run: npm ci --omit=optional
+      - run: npm run build
+      - run: cargo test --locked --workspace --target ${{ matrix.rust-target }}
+      # A static musl executable also runs on the GNU host used by Node.
+      # Stage the same binary under the host lookup path for integration only.
+      - if: contains(matrix.id, 'musl')
+        run: node scripts/stage-native.mjs --source target/${{ matrix.rust-target }}/release/inheriteame-native
+      - run: node --test test/integration/native.test.js
+      - run: mkdir -p release/${{ matrix.id }}
+      - run: |
+          package="inheriteame-${{ matrix.id }}"
+          if [[ "$package" == inheriteame-win32-* ]]; then package="@carlosiribar/$package"; fi
+          cd "npm/$package"
+          npm pack --ignore-scripts --pack-destination "${{ github.workspace }}/release/${{ matrix.id }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.id }}
+          path: release/${{ matrix.id }}/*.tgz
+          if-no-files-found: error
+
+
+  packages:
+    needs: [prepare, checks, native]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: release
+          merge-multiple: true
+      - run: npm ci --omit=optional
+      - run: npm run build
+      - run: npm pack --ignore-scripts --pack-destination release
+      - run: node scripts/verify-release.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: release/*.tgz
+          if-no-files-found: error
+
+  publish:
+    needs: [prepare, packages]
+    runs-on: ubuntu-24.04
+    environment: npm-release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+          path: release
+      - run: npm install --global npm@11
+      - run: node scripts/verify-release.mjs
+      - run: node scripts/publish-release.mjs
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+      - run: node scripts/wait-for-release.mjs
+      - run: |
+          npm install --global @salesforce/cli
+          printf 'y\n' | sf plugins install "inheriteame@${{ needs.prepare.outputs.version }}"
+          sf apex inherited-sharing fix --help
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ needs.prepare.outputs.tag }}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" release/*.tgz --generate-notes --verify-tag
+          fi

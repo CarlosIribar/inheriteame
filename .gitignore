@@ -1,0 +1,24 @@
+/node_modules/
+/lib/
+/target/
+/release/
+*.log
+.DS_Store
+
+# Local planning and agent state are never part of the public source tree.
+/AGENTS.md
+/.agents/
+/.codex/
+.env
+.env.*
+.npmrc
+*.pem
+*.key
+
+# Native artifacts are built by CI, not committed.
+/npm/*/bin/
+/npm/*/LICENSE
+*.tgz
+
+/npm/@carlosiribar/*/bin/
+/npm/@carlosiribar/*/LICENSE

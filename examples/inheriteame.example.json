@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "ignoreClassPatterns": ["*Controller", "*Test"],
+  "excludeFiles": [
+    "**/generated/**",
+    "force-app/main/default/classes/LegacyAdapter.cls"
+  ]
+}

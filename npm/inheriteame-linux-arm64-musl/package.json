@@ -1,0 +1,30 @@
+{
+  "name": "inheriteame-linux-arm64-musl",
+  "version": "0.1.0",
+  "description": "Native Linux ARM64 musl binary for inheriteame",
+  "license": "MIT",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "libc": [
+    "musl"
+  ],
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "inheriteame-native": "bin/inheriteame-native"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CarlosIribar/inheriteame.git"
+  }
+}

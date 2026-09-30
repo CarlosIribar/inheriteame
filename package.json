@@ -1,0 +1,78 @@
+{
+  "name": "inheriteame",
+  "version": "0.1.0",
+  "description": "Salesforce CLI plugin for explicit Apex inherited sharing",
+  "license": "MIT",
+  "author": "Carlos Iribar",
+  "keywords": [
+    "salesforce",
+    "sf",
+    "apex",
+    "inherited-sharing"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "./lib/index.js",
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs/PUBLISHING.md",
+    "examples"
+  ],
+  "engines": {
+    "node": ">=20.17.0"
+  },
+  "oclif": {
+    "commands": "./lib/commands"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.js",
+    "test:integration": "npm run build && npm run build:native && node --test test/integration/*.test.js",
+    "verify:packages": "node scripts/verify-packages.mjs",
+    "build:native": "cargo build --release --locked && node scripts/stage-native.mjs",
+    "pack:local": "npm run build && npm run build:native && node scripts/pack-local.mjs",
+    "pack:release": "node scripts/pack-release.mjs",
+    "release:prepare": "node scripts/release-prepare.mjs"
+  },
+  "dependencies": {
+    "@salesforce/sf-plugins-core": "^12.1.0",
+    "@oclif/core": "^4.0.0"
+  },
+  "optionalDependencies": {
+    "inheriteame-darwin-arm64": "0.1.0",
+    "inheriteame-darwin-x64": "0.1.0",
+    "inheriteame-linux-arm64-gnu": "0.1.0",
+    "inheriteame-linux-arm64-musl": "0.1.0",
+    "inheriteame-linux-x64-gnu": "0.1.0",
+    "inheriteame-linux-x64-musl": "0.1.0",
+    "@carlosiribar/inheriteame-win32-x64": "0.1.0",
+    "@carlosiribar/inheriteame-win32-arm64": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CarlosIribar/inheriteame.git"
+  },
+  "homepage": "https://github.com/CarlosIribar/inheriteame#readme",
+  "bugs": {
+    "url": "https://github.com/CarlosIribar/inheriteame/issues"
+  }
+}

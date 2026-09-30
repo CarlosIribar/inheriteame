@@ -1,0 +1,27 @@
+{
+  "name": "inheriteame-darwin-arm64",
+  "version": "0.1.0",
+  "description": "Native macOS ARM64 binary for inheriteame",
+  "license": "MIT",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "inheriteame-native": "bin/inheriteame-native"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CarlosIribar/inheriteame.git"
+  }
+}
