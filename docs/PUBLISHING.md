@@ -24,6 +24,11 @@ integrity matches the exact release artifact. Different bytes are an error.
 
 ## Authentication
 
+Initial package registration and Trusted Publisher setup are complete for all
+nine packages. Routine pushes require no local npm login, token, security-key
+confirmation or version-editing command. The bootstrap procedure below is only
+needed if a new native package is introduced.
+
 GitHub Actions uses npm Trusted Publishing with short-lived OIDC credentials.
 No `NPM_TOKEN` is stored in the repository. The publisher configuration for all
 nine packages is:
