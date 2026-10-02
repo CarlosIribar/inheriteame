@@ -4,7 +4,7 @@ import { performance } from 'node:perf_hooks';
 import { runNative } from '../../../native/run.js';
 
 export default class Fix extends SfCommand<unknown> {
-  public static readonly summary = 'Add inherited sharing to top-level Apex classes without explicit sharing.';
+  public static readonly summary = 'Add inherited sharing to Apex classes without explicit sharing.';
   public static readonly requiresProject = false;
   public static readonly enableJsonFlag = true;
   public static readonly flags = {

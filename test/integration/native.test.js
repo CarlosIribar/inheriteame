@@ -39,6 +39,17 @@ test('dry-run diff, check, write and idempotence across packages', async t => {
   assert.equal((await f.run()).result.changedFiles, 0);
 });
 
+test('repairs top-level and nested classes independently', async t => {
+  const f = fixture(t);
+  f.put('force-app/A.cls', 'public with sharing class A { private class B { class C {} } public without sharing class D {} }');
+  const dry = await f.run({ dryRun: true });
+  assert.equal(dry.exitCode, 0); assert.equal(dry.result.proposedEdits, 2);
+  assert.match(dry.result.files[0].diff, /private inherited sharing class B/);
+  assert.match(dry.result.files[0].diff, /inherited sharing class C/);
+  assert.equal((await f.run()).result.changedFiles, 1);
+  assert.equal((await f.run({ check: true })).exitCode, 0);
+});
+
 test('exclusions combine class names, paths and header markers without defaults', async t => {
   const f = fixture(t);
   f.put('force-app/A.cls', 'public class AccountCONTROLLER {}');

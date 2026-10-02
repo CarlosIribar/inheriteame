@@ -68,25 +68,36 @@ pub fn inspect(source: &str) -> Inspection {
         });
         return result;
     }
-    if let Some(class) = class {
-        let mut cursor = class.walk();
-        let modifiers = class
+    collect_missing_sharing(root, &mut result.analysis.edits);
+    result
+}
+
+fn collect_missing_sharing(node: Node<'_>, edits: &mut Vec<Edit>) {
+    if node.kind() == "class_declaration" {
+        let mut cursor = node.walk();
+        let modifiers = node
             .named_children(&mut cursor)
-            .find(|n| n.kind() == "modifiers");
-        if modifiers.is_some_and(has_sharing) {
-            return result;
-        }
-        let mut cursor = class.walk();
-        if let Some(keyword) = class.children(&mut cursor).find(|n| n.kind() == "class") {
-            result.analysis.edits.push(Edit {
-                start_byte: keyword.start_byte(),
-                end_byte: keyword.start_byte(),
-                replacement: "inherited sharing ".into(),
-                rule_id: "inherited-sharing",
-            });
+            .find(|child| child.kind() == "modifiers");
+        if !modifiers.is_some_and(has_sharing) {
+            let mut cursor = node.walk();
+            if let Some(keyword) = node
+                .children(&mut cursor)
+                .find(|child| child.kind() == "class")
+            {
+                edits.push(Edit {
+                    start_byte: keyword.start_byte(),
+                    end_byte: keyword.start_byte(),
+                    replacement: "inherited sharing ".into(),
+                    rule_id: "inherited-sharing",
+                });
+            }
         }
     }
-    result
+    for index in 0..node.child_count() {
+        if let Some(child) = node.child(index) {
+            collect_missing_sharing(child, edits);
+        }
+    }
 }
 
 fn has_sharing(node: Node<'_>) -> bool {
@@ -110,7 +121,7 @@ mod tests {
     use crate::apply_edits;
 
     #[test]
-    fn inserts_only_top_level_and_is_idempotent() {
+    fn inserts_into_every_class_declaration_and_is_idempotent() {
         for prefix in [
             "public",
             "global virtual",
@@ -122,15 +133,37 @@ mod tests {
             let result = inspect(&source);
             assert!(result.analysis.diagnostics.is_empty(), "{source}");
             assert_eq!(result.class_name.as_deref(), Some("Example"));
-            assert_eq!(result.analysis.edits.len(), 1);
+            assert_eq!(result.analysis.edits.len(), 2);
             let fixed = apply_edits(&source, &result.analysis.edits).unwrap();
             assert_eq!(
                 fixed,
-                source.replacen("class Example", "inherited sharing class Example", 1)
+                source
+                    .replace("class Example", "inherited sharing class Example")
+                    .replace("class Inner", "inherited sharing class Inner")
             );
             assert!(analyze(&fixed).diagnostics.is_empty(), "{fixed}");
             assert!(analyze(&fixed).edits.is_empty());
         }
+    }
+
+    #[test]
+    fn repairs_nested_classes_independently_of_explicit_outer_and_inner_modes() {
+        let source = "public with sharing class Outer {\n\
+            private class Missing {\n\
+                protected inherited sharing class Explicit {}\n\
+                class DeepMissing {}\n\
+            }\n\
+            public without sharing class Boundary {}\n\
+        }";
+        let result = inspect(source);
+        assert_eq!(result.class_name.as_deref(), Some("Outer"));
+        assert_eq!(result.analysis.edits.len(), 2);
+        let fixed = apply_edits(source, &result.analysis.edits).unwrap();
+        assert!(fixed.contains("private inherited sharing class Missing"));
+        assert!(fixed.contains("class Explicit {}"));
+        assert!(fixed.contains("inherited sharing class DeepMissing"));
+        assert!(fixed.contains("public without sharing class Boundary"));
+        assert!(analyze(&fixed).edits.is_empty());
     }
 
     #[test]
@@ -142,7 +175,7 @@ mod tests {
             "public WITH SHARING class A {}",
             "public interface A {}",
             "public enum A { One }",
-            "public with sharing class A { class Inner {} }",
+            "public with sharing class A { inherited sharing class Inner {} }",
         ] {
             let result = analyze(source);
             assert!(

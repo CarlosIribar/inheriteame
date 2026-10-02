@@ -1,11 +1,12 @@
 # inheriteame
 
-A Salesforce CLI plugin that adds `inherited sharing` to top-level Apex classes
+A Salesforce CLI plugin that adds `inherited sharing` to Apex classes
 without an explicit sharing declaration. Rust performs parsing, configuration,
 file selection and edits; TypeScript provides the Salesforce CLI command.
 
 Existing `with sharing`, `without sharing` and `inherited sharing` declarations
-are preserved. Inner classes, interfaces, enums and triggers are unchanged.
+are preserved. Top-level and inner classes are checked independently; interfaces,
+enums and triggers are unchanged.
 The plugin does not change DML, queries or other source content.
 
 ## Install

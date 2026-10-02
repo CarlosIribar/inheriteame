@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add inherited sharing to nested Apex classes without an explicit sharing declaration.
+
 ## 0.1.0
 
 - Add inherited sharing to eligible top-level Apex classes.
